@@ -13,7 +13,7 @@ export async function GET() {
                 streak: {
                     select: { current: true }
                 },
-                studySessions: {
+                sessions: {
                     select: {
                         durationMins: true,
                         startedAt: true
@@ -23,13 +23,12 @@ export async function GET() {
         })
 
         const leaderboard = users.map((user: any) => {
-            const totalMinutes = user.studySessions.reduce((acc: number, s: any) => acc + (s.durationMins || 0), 0)
+            const totalMinutes = user.sessions.reduce((acc: number, s: any) => acc + (s.durationMins || 0), 0)
 
             const oneWeekAgo = new Date()
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
 
-            const weeklyMinutes = user.studySessions
-                .filter((s: any) => new Date(s.startedAt) > oneWeekAgo)
+            const weeklyMinutes = user.sessions
                 .reduce((acc: number, s: any) => acc + (s.durationMins || 0), 0)
 
             return {

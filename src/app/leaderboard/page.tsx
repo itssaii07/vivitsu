@@ -18,26 +18,39 @@ export default function LeaderboardPage() {
     const [leaderboard, setLeaderboard] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
+    const [connectedIds, setConnectedIds] = useState<Set<string>>(new Set())
+
     useEffect(() => {
-        const fetchLeaderboard = async () => {
+        const fetchData = async () => {
+            if (!user) return
             try {
-                const res = await fetch('/api/leaderboard')
-                const data = await res.json()
-                if (data.leaderboard) {
-                    const enhanced = data.leaderboard.map((u: any) => ({
+                const [leaderboardRes, friendsRes] = await Promise.all([
+                    fetch('/api/leaderboard'),
+                    fetch(`/api/friends?userId=${user.id}`)
+                ])
+
+                const lbData = await leaderboardRes.json()
+                const friendsData = await friendsRes.json()
+
+                if (lbData.leaderboard) {
+                    const enhanced = lbData.leaderboard.map((u: any) => ({
                         ...u,
-                        isCurrentUser: user?.id === u.id
+                        isCurrentUser: user.id === u.id
                     }))
                     setLeaderboard(enhanced)
                 }
+
+                if (friendsData.connectedUserIds) {
+                    setConnectedIds(new Set(friendsData.connectedUserIds))
+                }
             } catch (error) {
-                console.error('Failed to fetch leaderboard', error)
+                console.error('Failed to fetch data', error)
             } finally {
                 setLoading(false)
             }
         }
 
-        fetchLeaderboard()
+        fetchData()
     }, [user?.id])
 
     return (
@@ -77,7 +90,12 @@ export default function LeaderboardPage() {
                                         </div>
                                     ) : (
                                         leaderboard.map((u, index) => (
-                                            <LeaderboardRow key={u.id} user={u} rank={index + 1} />
+                                            <LeaderboardRow
+                                                key={u.id}
+                                                user={u}
+                                                rank={index + 1}
+                                                isFriend={connectedIds.has(u.id)}
+                                            />
                                         ))
                                     )}
                                 </div>
@@ -130,7 +148,7 @@ function TopUserCard({ user, rank }: { user: any; rank: number }) {
     )
 }
 
-function LeaderboardRow({ user, rank }: { user: any; rank: number }) {
+function LeaderboardRow({ user, rank, isFriend }: { user: any; rank: number; isFriend: boolean }) {
     return (
         <div
             className={`flex items-center gap-4 p-4 ${user.isCurrentUser ? 'bg-violet-500/10' : ''
@@ -175,7 +193,7 @@ function LeaderboardRow({ user, rank }: { user: any; rank: number }) {
                 <Clock className="w-4 h-4" />
                 <span>{formatDuration(user.weeklyHours * 60)}</span>
 
-                {!user.isCurrentUser && (
+                {!user.isCurrentUser && !isFriend && (
                     <InviteButton targetId={user.id} />
                 )}
             </div>

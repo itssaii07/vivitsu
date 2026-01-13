@@ -10,7 +10,7 @@ interface StudyState {
     // Actions
     fetchStats: (userId: string) => Promise<void>
     startSession: (user: { id: string, email?: string, name?: string, avatar?: string }) => Promise<void>
-    endSession: (sessionId: string) => Promise<void>
+    endSession: (sessionId: string, userId: string) => Promise<void>
 
     // Sync actions (internal or quick updates)
     setStreak: (streak: number) => void
@@ -73,7 +73,7 @@ export const useStudyStore = create<StudyState>((set, get) => ({
         }
     },
 
-    endSession: async (sessionId: string) => {
+    endSession: async (sessionId: string, userId: string) => {
         // Optimistic update stops local timer visually, but we wait for server for stats
         set({ isStudying: false, sessionStartTime: null, activeSessionId: null })
 
@@ -81,7 +81,9 @@ export const useStudyStore = create<StudyState>((set, get) => ({
             // We need to know the endpoint.
             // Based on folder structure: sessions/[id]/end/route.ts -> /api/sessions/:id/end
             const res = await fetch(`/api/sessions/${sessionId}/end`, {
-                method: 'POST'
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId })
             })
             const data = await res.json()
 

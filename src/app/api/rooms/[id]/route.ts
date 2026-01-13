@@ -55,12 +55,27 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params
-        const { userId } = await request.json()
+        const { userId, deleteRoom } = await request.json()
+        console.log(`[DELETE ROOM] Request for room ${id}:`, { userId, deleteRoom })
 
         if (!userId) {
             return NextResponse.json({ error: 'User ID required' }, { status: 400 })
         }
 
+        if (deleteRoom) {
+            // Verify ownership
+            const room = await prisma.room.findUnique({ where: { id } })
+            if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 })
+
+            if (room.createdById !== userId) {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+            }
+
+            await prisma.room.delete({ where: { id } })
+            return NextResponse.json({ success: true, deleted: true })
+        }
+
+        // Leave room logic (existing)
         await prisma.roomMember.update({
             where: { roomId_userId: { roomId: id, userId } },
             data: { isOnline: false },

@@ -6,6 +6,7 @@ import {
     Brain,
     TrendingUp,
     MessageSquare,
+    MessageCircle,
     Users,
     Trophy,
     LogOut,
@@ -17,6 +18,7 @@ import { useAuth } from '@/components/providers'
 const navItems = [
     { href: '/dashboard', icon: TrendingUp, label: 'Dashboard' },
     { href: '/chat', icon: MessageSquare, label: 'AI Assistant' },
+    { href: '/messages', icon: MessageCircle, label: 'Messages' },
     { href: '/rooms', icon: Users, label: 'Study Rooms' },
     { href: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
     { href: '/notes', icon: FileText, label: 'Notes' },

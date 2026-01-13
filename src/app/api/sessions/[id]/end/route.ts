@@ -28,9 +28,9 @@ export async function POST(
         }
 
         const endedAt = new Date()
-        const durationMins = Math.floor(
+        const durationMins = Math.max(1, Math.ceil(
             (endedAt.getTime() - session.startedAt.getTime()) / 60000
-        )
+        ))
 
         const updatedSession = await prisma.studySession.update({
             where: { id },

@@ -17,6 +17,8 @@ interface RoomMessage {
     userName: string
     userAvatar?: string
     content: string
+    type?: 'TEXT' | 'IMAGE' | 'FILE'
+    fileUrl?: string
     timestamp: Date
 }
 
@@ -168,8 +170,8 @@ export function useSocket() {
         useRoomStore.getState().reset()
     }, [])
 
-    const sendMessage = useCallback((roomId: string, userId: string, userName: string, userAvatar: string | undefined, content: string) => {
-        socketRef.current?.emit('send_message', { roomId, userId, userName, userAvatar, content })
+    const sendMessage = useCallback((roomId: string, userId: string, userName: string, userAvatar: string | undefined, content: string, type: 'TEXT' | 'IMAGE' | 'FILE' = 'TEXT', fileUrl?: string) => {
+        socketRef.current?.emit('send_message', { roomId, userId, userName, userAvatar, content, type, fileUrl })
     }, [])
 
     const startTyping = useCallback((roomId: string, userId: string, userName: string) => {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
     User,
     Mail,
@@ -11,7 +12,9 @@ import {
     UserPlus,
     Check,
     X,
-    Loader2
+    Trash2,
+    Loader2,
+    MessageCircle
 } from 'lucide-react'
 import { Button, Card } from '@/components/ui'
 import { useAuth } from '@/components/providers'
@@ -26,6 +29,7 @@ const SUBJECTS = [
 
 export default function ProfilePage() {
     const { user } = useAuth()
+    const router = useRouter()
     const [activeTab, setActiveTab] = useState<'profile' | 'friends'>('profile')
 
     // Profile State
@@ -150,10 +154,50 @@ export default function ProfilePage() {
         }
     }
 
+    const handleMessage = async (friendId: string) => {
+        if (!user) return
+        try {
+            const res = await fetch('/api/direct-messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.id, targetUserId: friendId })
+            })
+            const data = await res.json()
+            if (data.roomId) {
+                // Use window.location for full refresh or router.push
+                // Using router from hook would be better, but need to check if hook is available
+                // router is not defined in this scope yet, let's fix imports
+                router.push(`/messages/${data.roomId}`)
+            }
+        } catch (error) {
+            console.error('Failed to start chat', error)
+        }
+    }
+
     const handleAcceptRequest = async (friendshipId: string) => {
         await fetch('/api/friends', {
             method: 'PUT',
             body: JSON.stringify({ friendshipId, status: 'ACCEPTED' })
+        })
+        fetchFriends()
+    }
+
+    const handleDenyRequest = async (friendshipId: string) => {
+        if (!confirm('Are you sure you want to deny this request?')) return
+        if (!user) return
+
+        await fetch(`/api/friends?id=${friendshipId}&userId=${user.id}`, {
+            method: 'DELETE'
+        })
+        fetchFriends()
+    }
+
+    const handleRemoveFriend = async (friendshipId: string) => {
+        if (!confirm('Are you sure you want to remove this friend?')) return
+        if (!user) return
+
+        await fetch(`/api/friends?id=${friendshipId}&userId=${user.id}`, {
+            method: 'DELETE'
         })
         fetchFriends()
     }
@@ -253,9 +297,14 @@ export default function ProfilePage() {
                                                         <p className="text-zinc-500 text-sm">{req.sender.email}</p>
                                                     </div>
                                                 </div>
-                                                <Button size="sm" onClick={() => handleAcceptRequest(req.id)}>
-                                                    <Check className="w-4 h-4 mr-2" /> Accept
-                                                </Button>
+                                                <div className="flex gap-2">
+                                                    <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300 hover:bg-red-500/10" onClick={() => handleDenyRequest(req.id)}>
+                                                        <X className="w-4 h-4 mr-2" /> Deny
+                                                    </Button>
+                                                    <Button size="sm" onClick={() => handleAcceptRequest(req.id)}>
+                                                        <Check className="w-4 h-4 mr-2" /> Accept
+                                                    </Button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -276,14 +325,34 @@ export default function ProfilePage() {
                                     <p className="text-center text-zinc-500 py-8">No friends yet. Add someone to start studying together!</p>
                                 ) : (
                                     <div className="grid grid-cols-1 gap-4">
-                                        {friends.map(({ friend }) => (
-                                            <div key={friend.id} className="flex items-center gap-3 p-3 bg-zinc-800/30 rounded-xl">
+                                        {friends.map((item) => (
+                                            <div key={item.id} className="flex items-center gap-3 p-3 bg-zinc-800/30 rounded-xl">
                                                 <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center text-white overflow-hidden">
-                                                    {friend.avatarUrl ? <img src={friend.avatarUrl} className="w-full h-full object-cover" /> : friend.name?.[0] || '?'}
+                                                    {item.friend.avatarUrl ? <img src={item.friend.avatarUrl} className="w-full h-full object-cover" /> : item.friend.name?.[0] || '?'}
                                                 </div>
                                                 <div>
-                                                    <p className="text-white font-medium">{friend.name || 'Unknown'}</p>
-                                                    <p className="text-zinc-500 text-sm">{friend.email}</p>
+                                                    <p className="text-white font-medium">{item.friend.name || 'Unknown'}</p>
+                                                    <p className="text-zinc-500 text-sm">{item.friend.email}</p>
+                                                </div>
+                                                <div className="ml-auto flex items-center gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="text-zinc-500 hover:text-violet-400 p-2 h-auto"
+                                                        onClick={() => handleMessage(item.friend.id)}
+                                                        title="Message"
+                                                    >
+                                                        <MessageCircle className="w-5 h-5" />
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="text-zinc-500 hover:text-red-400 p-2 h-auto"
+                                                        onClick={() => handleRemoveFriend(item.id)}
+                                                        title="Remove Friend"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
                                                 </div>
                                             </div>
                                         ))}

@@ -12,7 +12,9 @@ import {
     Timer,
     Play,
     Pause,
-    MessageSquare
+    MessageSquare,
+    Copy,
+    Lock
 } from 'lucide-react'
 import { Button, Card } from '@/components/ui'
 import { useSocket, useRoomStore } from '@/lib/socket'
@@ -29,12 +31,52 @@ export default function RoomChatPage() {
 
     const [input, setInput] = useState('')
     const [roomName, setRoomName] = useState('Study Room')
+    const [joinCode, setJoinCode] = useState<string | null>(null)
+    const [isPrivate, setIsPrivate] = useState(false)
     const [pomodoroMins, setPomodoroMins] = useState(25)
     const [breakMins, setBreakMins] = useState(5)
     const [timeLeft, setTimeLeft] = useState<number | null>(null)
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+    const [connectedIds, setConnectedIds] = useState<Set<string>>(new Set())
+
+    // Fetch room details
+    useEffect(() => {
+        const fetchRoom = async () => {
+            try {
+                const res = await fetch(`/api/rooms/${roomId}`)
+                const data = await res.json()
+                if (data.room) {
+                    setRoomName(data.room.name)
+                    setJoinCode(data.room.joinCode)
+                    setIsPrivate(data.room.isPrivate)
+                    setPomodoroMins(data.room.pomodoroMins || 25)
+                }
+            } catch (error) {
+                console.error('Failed to fetch room', error)
+            }
+        }
+        if (roomId) fetchRoom()
+    }, [roomId])
+
+    // Fetch friend connections
+    useEffect(() => {
+        if (!user) return
+        const fetchConnections = async () => {
+            try {
+                const res = await fetch(`/api/friends?userId=${user.id}`)
+                const data = await res.json()
+                if (data.connectedUserIds) {
+                    setConnectedIds(new Set(data.connectedUserIds))
+                }
+            } catch (error) {
+                console.error('Failed to fetch connections', error)
+            }
+        }
+        fetchConnections()
+    }, [user])
 
     // Join room on mount or when connected
     useEffect(() => {
@@ -126,6 +168,13 @@ export default function RoomChatPage() {
         return `${mins}:${secs.toString().padStart(2, '0')}`
     }
 
+    const copyCode = () => {
+        if (joinCode) {
+            navigator.clipboard.writeText(joinCode)
+            alert('Room code copied!')
+        }
+    }
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-violet-950/10 to-zinc-950 flex">
             {/* Main Chat Area */}
@@ -137,7 +186,10 @@ export default function RoomChatPage() {
                             <ArrowLeft className="w-5 h-5" />
                         </Button>
                         <div>
-                            <h1 className="text-xl font-bold text-white">{roomName}</h1>
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-xl font-bold text-white">{roomName}</h1>
+                                {isPrivate && <Lock className="w-4 h-4 text-zinc-500" />}
+                            </div>
                             <div className="flex items-center gap-2 text-sm text-zinc-400">
                                 <div className="w-2 h-2 rounded-full bg-green-400" />
                                 {users.length} {users.length === 1 ? 'person' : 'people'} studying
@@ -145,8 +197,21 @@ export default function RoomChatPage() {
                         </div>
                     </div>
 
-                    {/* Pomodoro Timer */}
+                    {/* Pomodoro Timer & Controls */}
                     <div className="flex items-center gap-4">
+                        {/* Room Code Display */}
+                        {joinCode && (
+                            <div
+                                onClick={copyCode}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800/50 hover:bg-zinc-800 rounded-lg border border-zinc-700/50 cursor-pointer transition-colors group"
+                                title="Click to copy room code"
+                            >
+                                <span className="text-xs text-zinc-400 font-medium">CODE:</span>
+                                <span className="text-sm font-mono text-white tracking-wider">{joinCode}</span>
+                                <Copy className="w-3.5 h-3.5 text-zinc-500 group-hover:text-violet-400 transition-colors" />
+                            </div>
+                        )}
+
                         {timeLeft !== null && (
                             <div className={`px-4 py-2 rounded-xl font-mono text-xl font-bold ${pomodoroStatus?.status === 'break'
                                 ? 'bg-green-500/20 text-green-400'
@@ -275,7 +340,7 @@ export default function RoomChatPage() {
                                 </p>
                                 <div className="flex items-center gap-2">
                                     <p className="text-zinc-500 text-xs">Studying</p>
-                                    {roomUser.id !== user?.id && (
+                                    {roomUser.id !== user?.id && !connectedIds.has(roomUser.id) && (
                                         <InviteButton targetId={roomUser.id} minimal />
                                     )}
                                 </div>

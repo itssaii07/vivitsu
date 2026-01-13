@@ -1,11 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-// Get all active rooms
-export async function GET() {
+// Generate a random 6-character code
+function generateRoomCode() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase()
+}
+
+// Get all active rooms (Public + relevant Private)
+export async function GET(request: NextRequest) {
     try {
+        const { searchParams } = new URL(request.url)
+        const userId = searchParams.get('userId')
+
         const rooms = await prisma.room.findMany({
-            where: { isActive: true },
+            where: {
+                isActive: true,
+                roomType: { not: 'direct' },
+                OR: [
+                    { isPrivate: false }, // Public rooms
+                    ...(userId ? [
+                        { createdById: userId }, // Created by me
+                        { members: { some: { userId: userId } } } // Joined by me
+                    ] : [])
+                ]
+            },
             include: {
                 createdBy: {
                     select: { id: true, name: true },
@@ -28,6 +46,10 @@ export async function GET() {
             pomodoroMins: room.pomodoroMins,
             breakMins: room.breakMins,
             createdBy: room.createdBy.name,
+            createdById: room.createdById,
+            isPrivate: room.isPrivate,
+            joinCode: room.joinCode,
+            maxParticipants: room.maxParticipants,
             membersOnline: room.members.filter((m) => m.isOnline).length,
             totalMembers: room._count.members,
             createdAt: room.createdAt,
@@ -36,34 +58,14 @@ export async function GET() {
         return NextResponse.json({ rooms: formattedRooms })
     } catch (error) {
         console.error('Get rooms error:', error)
-        // Return mock data if DB not connected
-        return NextResponse.json({
-            rooms: [
-                {
-                    id: '1',
-                    name: 'Math Study Group',
-                    roomType: 'pomodoro',
-                    pomodoroMins: 25,
-                    membersOnline: 3,
-                    totalMembers: 8,
-                },
-                {
-                    id: '2',
-                    name: 'Coding Practice',
-                    roomType: 'open',
-                    pomodoroMins: 0,
-                    membersOnline: 5,
-                    totalMembers: 12,
-                },
-            ],
-        })
+        return NextResponse.json({ error: 'Failed to fetch rooms' }, { status: 500 })
     }
 }
 
 // Create a new room
 export async function POST(request: NextRequest) {
     try {
-        const { name, description, roomType, pomodoroMins, breakMins, userId, userEmail, userName } =
+        const { name, description, roomType, pomodoroMins, breakMins, userId, userEmail, userName, isPrivate, maxParticipants } =
             await request.json()
 
         if (!name || !userId) {
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Ensure user exists in our database
+        // Ensure user exists
         await prisma.user.upsert({
             where: { id: userId },
             create: {
@@ -82,11 +84,12 @@ export async function POST(request: NextRequest) {
                 name: userName || 'Anonymous',
             },
             update: {
-                // Optional: keep profile synced
                 ...(userEmail && { email: userEmail }),
                 ...(userName && { name: userName }),
             }
         })
+
+        const joinCode = generateRoomCode()
 
         const room = await prisma.room.create({
             data: {
@@ -96,6 +99,9 @@ export async function POST(request: NextRequest) {
                 pomodoroMins: pomodoroMins || 25,
                 breakMins: breakMins || 5,
                 createdById: userId,
+                isPrivate: isPrivate || false,
+                joinCode,
+                maxParticipants: maxParticipants || 50,
                 members: {
                     create: {
                         userId,

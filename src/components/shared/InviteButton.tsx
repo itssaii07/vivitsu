@@ -27,12 +27,17 @@ export function InviteButton({ targetId, minimal = false }: { targetId: string, 
             if (res.ok) {
                 setStatus('sent')
             } else {
-                console.error(data.error)
-                setStatus('error')
-                if (res.status === 404) {
-                    alert("This user hasn't finished setting up their profile yet.")
+                if (data.error === 'Friendship already exists') {
+                    setStatus('sent')
+                    // Optional: could show a toast here, but 'sent' status/icon is good feedback
+                } else {
+                    console.error(data.error)
+                    setStatus('error')
+                    if (res.status === 404) {
+                        alert("This user hasn't finished setting up their profile yet.")
+                    }
+                    setTimeout(() => setStatus('idle'), 2000)
                 }
-                setTimeout(() => setStatus('idle'), 2000)
             }
         } catch {
             setStatus('error')

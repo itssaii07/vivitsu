@@ -72,20 +72,22 @@ io.on('connection', (socket) => {
     })
 
     // Send a message
-    socket.on('send_message', ({ roomId, userId, userName, userAvatar, content }) => {
+    socket.on('send_message', ({ roomId, userId, userName, userAvatar, content, type, fileUrl }) => {
         const message = {
             id: `${Date.now()}-${userId}`,
             userId,
             userName,
             userAvatar,
             content,
+            type,
+            fileUrl,
             timestamp: new Date(),
         }
 
         // Broadcast to room (including sender)
         io.to(roomId).emit('new_message', message)
 
-        console.log(`[${roomId}] ${userName}: ${content}`)
+        console.log(`[${roomId}] ${userName}: ${content} (${type || 'TEXT'})`)
     })
 
     // Typing indicator

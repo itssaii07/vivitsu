@@ -38,7 +38,26 @@ export async function GET(request: NextRequest) {
             }
         })
 
-        return NextResponse.json({ friends, requests })
+        // Fetch ALL connections to identify who to hide "Add Friend" button for
+        const allConnections = await prisma.friendship.findMany({
+            where: {
+                OR: [
+                    { senderId: userId },
+                    { receiverId: userId }
+                ]
+            },
+            select: {
+                senderId: true,
+                receiverId: true,
+                status: true
+            }
+        })
+
+        const connectedUserIds = allConnections.map(c =>
+            c.senderId === userId ? c.receiverId : c.senderId
+        )
+
+        return NextResponse.json({ friends, requests, connectedUserIds })
     } catch (error) {
         console.error('Get friends error:', error)
         return NextResponse.json({ error: 'Failed to fetch friends' }, { status: 500 })
@@ -121,5 +140,39 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ friendship })
     } catch (error) {
         return NextResponse.json({ error: 'Failed to update' }, { status: 500 })
+    }
+}
+// Remove Friend or Cancel Request
+export async function DELETE(request: NextRequest) {
+    try {
+        const { searchParams } = new URL(request.url)
+        const friendshipId = searchParams.get('id')
+        const userId = searchParams.get('userId')
+
+        if (!friendshipId || !userId) {
+            return NextResponse.json({ error: 'Missing requirements' }, { status: 400 })
+        }
+
+        // Verify ownership
+        const friendship = await prisma.friendship.findUnique({
+            where: { id: friendshipId }
+        })
+
+        if (!friendship) {
+            return NextResponse.json({ error: 'Not found' }, { status: 404 })
+        }
+
+        if (friendship.senderId !== userId && friendship.receiverId !== userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+        }
+
+        await prisma.friendship.delete({
+            where: { id: friendshipId }
+        })
+
+        return NextResponse.json({ success: true })
+    } catch (error) {
+        console.error('Delete friend error:', error)
+        return NextResponse.json({ error: 'Failed to remove' }, { status: 500 })
     }
 }

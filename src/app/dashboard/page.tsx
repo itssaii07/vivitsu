@@ -78,8 +78,9 @@ export default function DashboardPage() {
     }
 
     const handleEndSession = async () => {
-        if (activeSessionId) {
-            await endSession(activeSessionId)
+        if (activeSessionId && user) {
+            await endSession(activeSessionId, user.id)
+            await fetchStats(user.id)
         }
     }
 

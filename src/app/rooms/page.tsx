@@ -7,7 +7,11 @@ import {
     Clock,
     Users as UsersIcon,
     Play,
-    Timer
+    Timer,
+    Trash2,
+    Lock,
+    Copy,
+    Share2
 } from 'lucide-react'
 import { Button, Card } from '@/components/ui'
 import { useAuth } from '@/components/providers'
@@ -21,7 +25,9 @@ export default function RoomsPage() {
 
     const fetchRooms = async () => {
         try {
-            const res = await fetch('/api/rooms')
+            // Pass userId to get my private rooms too
+            const query = user?.id ? `?userId=${user.id}` : ''
+            const res = await fetch(`/api/rooms${query}`)
             const data = await res.json()
             if (data.rooms) {
                 setRooms(data.rooms)
@@ -34,13 +40,37 @@ export default function RoomsPage() {
     }
 
     useEffect(() => {
-        fetchRooms()
-    }, [])
+        if (user) fetchRooms()
+    }, [user]) // Re-fetch when user loads
 
     const handleRoomCreated = () => {
         setShowCreateModal(false)
         fetchRooms()
     }
+
+    const handleJoinByCode = async (code: string) => {
+        if (!user || !code) return
+        try {
+            const res = await fetch('/api/rooms/join', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ joinCode: code, userId: user.id })
+            })
+            const data = await res.json()
+            if (res.ok) {
+                // Refresh to show in "Private Rooms" list, then redirect
+                fetchRooms()
+                window.location.href = `/rooms/${data.roomId}`
+            } else {
+                alert(data.error || 'Failed to join')
+            }
+        } catch (error) {
+            console.error('Join error', error)
+        }
+    }
+
+    const privateRooms = rooms.filter(r => r.isPrivate)
+    const publicRooms = rooms.filter(r => !r.isPrivate)
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-violet-950/10 to-zinc-950">
@@ -55,27 +85,80 @@ export default function RoomsPage() {
                             <h1 className="text-3xl font-bold text-white mb-2">Study Rooms</h1>
                             <p className="text-zinc-400">Join a room or create your own to study with friends</p>
                         </div>
-                        <Button onClick={() => setShowCreateModal(true)}>
-                            <Plus className="w-5 h-5" />
-                            Create Room
-                        </Button>
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center bg-zinc-800/50 rounded-lg p-1 border border-zinc-700">
+                                <input
+                                    type="text"
+                                    placeholder="Enter Room Code"
+                                    className="bg-transparent border-none text-sm px-3 py-1.5 focus:outline-none text-white w-32 uppercase"
+                                    maxLength={6}
+                                    id="join-code-input"
+                                />
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                        const input = document.getElementById('join-code-input') as HTMLInputElement
+                                        if (input.value) handleJoinByCode(input.value)
+                                    }}
+                                >
+                                    Join
+                                </Button>
+                            </div>
+                            <Button onClick={() => setShowCreateModal(true)}>
+                                <Plus className="w-5 h-5" />
+                                Create Room
+                            </Button>
+                        </div>
                     </div>
 
-                    {/* Active Rooms */}
-                    <div className="mb-8">
-                        <h2 className="text-xl font-semibold text-white mb-4">Active Rooms</h2>
-                        {loading ? (
-                            <div className="text-zinc-400">Loading rooms...</div>
-                        ) : (
+
+
+                    {/* Private Rooms Section */}
+                    {privateRooms.length > 0 && (
+                        <div className="mb-10">
+                            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                                <Lock className="w-5 h-5 text-violet-400" />
+                                My Private Rooms
+                            </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {rooms.map((room) => (
-                                    <RoomCard key={room.id} room={room} />
+                                {privateRooms.map((room) => (
+                                    <RoomCard
+                                        key={room.id}
+                                        room={room}
+                                        userId={user?.id}
+                                        onDelete={fetchRooms}
+                                    />
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {/* Public Rooms Section */}
+                    <div className="mb-8">
+                        <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                            <UsersIcon className="w-5 h-5 text-zinc-400" />
+                            Public Rooms
+                        </h2>
+                        {loading ? (
+                            <div className="text-zinc-400">Loading rooms...</div>
+                        ) : publicRooms.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {publicRooms.map((room) => (
+                                    <RoomCard
+                                        key={room.id}
+                                        room={room}
+                                        userId={user?.id}
+                                        onDelete={fetchRooms}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-zinc-500 italic">No public rooms active right now.</div>
                         )}
                     </div>
 
-                    {/* Empty state for when there are no rooms */}
+                    {/* Empty state for when there are no rooms at all */}
                     {!loading && rooms.length === 0 && (
                         <Card variant="glass" className="text-center py-16">
                             <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-600/20 to-indigo-600/20 flex items-center justify-center mx-auto mb-6">
@@ -103,42 +186,105 @@ export default function RoomsPage() {
     )
 }
 
-function RoomCard({ room }: { room: any }) {
+const RoomCard = ({ room, userId, onDelete }: { room: any, userId?: string, onDelete: () => void }) => {
+    const isCreator = room.createdById === userId || room.createdBy?.id === userId
+
+    const handleDelete = async (e: React.MouseEvent) => {
+        e.preventDefault() // Prevent navigation
+        if (!confirm('Are you sure you want to delete this room?')) return
+
+        try {
+            const res = await fetch(`/api/rooms/${room.id}`, {
+                method: 'DELETE',
+                body: JSON.stringify({ userId, deleteRoom: true })
+            })
+            if (res.ok) {
+                onDelete()
+            }
+        } catch (error) {
+            console.error('Failed to delete room', error)
+        }
+    }
+
+    const copyCode = (e: React.MouseEvent) => {
+        e.preventDefault()
+        navigator.clipboard.writeText(room.joinCode)
+        alert(`Room code copied: ${room.joinCode}`)
+    }
+
     return (
         <Link href={`/rooms/${room.id}`}>
-            <Card className="hover:border-violet-500/50 transition-all group cursor-pointer">
+            <Card className="hover:border-violet-500/50 transition-all group cursor-pointer relative h-full flex flex-col">
                 <div className="flex items-start justify-between mb-4">
                     <div>
-                        <h3 className="text-lg font-semibold text-white mb-1">{room.name}</h3>
+                        <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-semibold text-white">{room.name}</h3>
+                            {room.isPrivate && <Lock className="w-4 h-4 text-zinc-500" />}
+                        </div>
+
                         <div className="flex items-center gap-2 text-sm text-zinc-400">
                             {room.roomType === 'pomodoro' ? (
                                 <>
                                     <Timer className="w-4 h-4" />
-                                    <span>{room.pomodoroMins}min Pomodoro</span>
+                                    <span>{room.pomodoroMins}min</span>
                                 </>
                             ) : (
                                 <>
                                     <Clock className="w-4 h-4" />
-                                    <span>Open Session</span>
+                                    <span>Open</span>
                                 </>
                             )}
                         </div>
                     </div>
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/20 text-green-400 text-xs">
-                        <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                        Live
+
+                    <div className="flex items-center gap-1">
+                        {isCreator && (
+                            <button
+                                onClick={handleDelete}
+                                className="p-2 text-zinc-500 hover:text-red-500 rounded-full hover:bg-red-500/10 transition-colors z-10"
+                                title="Delete Room"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        )}
+                        {!isCreator && (
+                            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/20 text-green-400 text-xs">
+                                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                                Live
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm text-zinc-400">
                         <UsersIcon className="w-4 h-4" />
-                        <span>{room.membersOnline} / {room.totalMembers || room._count?.members || 0} online</span>
+                        <span>{room.membersOnline} / {room.maxParticipants || room.totalMembers} online</span>
                     </div>
-                    <Button size="sm" variant="secondary">
-                        <Play className="w-4 h-4" />
-                        Join
-                    </Button>
+
+                    {isCreator && room.joinCode && (
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    const text = `Join my private study room "${room.name}" on Vivitsu! Code: ${room.joinCode}`
+                                    navigator.clipboard.writeText(text)
+                                    alert('Invite message copied!')
+                                }}
+                                className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-white px-2 py-1 rounded hover:bg-zinc-800 transition-colors"
+                            >
+                                <Share2 className="w-3 h-3" />
+                                Invite
+                            </button>
+                            <button
+                                onClick={copyCode}
+                                className="flex items-center gap-1.5 text-xs font-medium text-violet-400 hover:text-violet-300 px-2 py-1 rounded bg-violet-500/10 hover:bg-violet-500/20 transition-colors"
+                            >
+                                <Copy className="w-3 h-3" />
+                                {room.joinCode}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </Card>
         </Link>
@@ -148,8 +294,10 @@ function RoomCard({ room }: { room: any }) {
 function CreateRoomModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
     const { user } = useAuth()
     const [name, setName] = useState('')
-    const [roomType, setRoomType] = useState<'open' | 'pomodoro'>('pomodoro')
+    const [roomType, setRoomType] = useState<'open' | 'pomodoro'>('open')
+    const [isPrivate, setIsPrivate] = useState(false)
     const [pomodoroMins, setPomodoroMins] = useState(25)
+    const [maxParticipants, setMaxParticipants] = useState(10)
     const [creating, setCreating] = useState(false)
 
     const handleCreate = async () => {
@@ -163,6 +311,8 @@ function CreateRoomModal({ onClose, onCreated }: { onClose: () => void; onCreate
                 body: JSON.stringify({
                     name,
                     roomType,
+                    isPrivate,
+                    maxParticipants,
                     pomodoroMins: roomType === 'pomodoro' ? pomodoroMins : 0,
                     userId: user.id,
                     userEmail: user.email,
@@ -171,7 +321,9 @@ function CreateRoomModal({ onClose, onCreated }: { onClose: () => void; onCreate
             })
 
             if (res.ok) {
-                onCreated()
+                const data = await res.json()
+                onCreated() // Refresh list (though private won't show)
+                window.location.href = `/rooms/${data.room.id}` // Redirect to room
             }
         } catch (error) {
             console.error('Failed to create room', error)
@@ -201,54 +353,59 @@ function CreateRoomModal({ onClose, onCreated }: { onClose: () => void; onCreate
 
                     <div>
                         <label className="block text-sm font-medium text-zinc-400 mb-2">
-                            Room Type
+                            Privacy
                         </label>
                         <div className="grid grid-cols-2 gap-4">
                             <button
-                                onClick={() => setRoomType('pomodoro')}
-                                className={`p-4 rounded-xl border transition-all ${roomType === 'pomodoro'
+                                onClick={() => setIsPrivate(false)}
+                                className={`p-4 rounded-xl border transition-all text-left group ${!isPrivate
                                     ? 'border-violet-500 bg-violet-500/10'
                                     : 'border-zinc-700 hover:border-zinc-600'
                                     }`}
                             >
-                                <Timer className={`w-6 h-6 mb-2 ${roomType === 'pomodoro' ? 'text-violet-400' : 'text-zinc-400'}`} />
-                                <p className={`font-medium ${roomType === 'pomodoro' ? 'text-white' : 'text-zinc-400'}`}>
-                                    Pomodoro
+                                <UsersIcon className={`w-6 h-6 mb-2 ${!isPrivate ? 'text-violet-400' : 'text-zinc-400'}`} />
+                                <p className={`font-medium ${!isPrivate ? 'text-white' : 'text-zinc-400'}`}>
+                                    Public
                                 </p>
-                                <p className="text-xs text-zinc-500 mt-1">Timed sessions</p>
+                                <p className="text-xs text-zinc-500 mt-1">Visible to everyone</p>
                             </button>
                             <button
-                                onClick={() => setRoomType('open')}
-                                className={`p-4 rounded-xl border transition-all ${roomType === 'open'
+                                onClick={() => setIsPrivate(true)}
+                                className={`p-4 rounded-xl border transition-all text-left group ${isPrivate
                                     ? 'border-violet-500 bg-violet-500/10'
                                     : 'border-zinc-700 hover:border-zinc-600'
                                     }`}
                             >
-                                <Clock className={`w-6 h-6 mb-2 ${roomType === 'open' ? 'text-violet-400' : 'text-zinc-400'}`} />
-                                <p className={`font-medium ${roomType === 'open' ? 'text-white' : 'text-zinc-400'}`}>
-                                    Open
+                                <Lock className={`w-6 h-6 mb-2 ${isPrivate ? 'text-violet-400' : 'text-zinc-400'}`} />
+                                <p className={`font-medium ${isPrivate ? 'text-white' : 'text-zinc-400'}`}>
+                                    Private
                                 </p>
-                                <p className="text-xs text-zinc-500 mt-1">Free-form study</p>
+                                <p className="text-xs text-zinc-500 mt-1">Invite only</p>
                             </button>
                         </div>
                     </div>
 
-                    {roomType === 'pomodoro' && (
-                        <div>
-                            <label className="block text-sm font-medium text-zinc-400 mb-2">
-                                Session Length: {pomodoroMins} minutes
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="text-sm font-medium text-zinc-400">
+                                Max Participants
                             </label>
-                            <input
-                                type="range"
-                                min="15"
-                                max="60"
-                                step="5"
-                                value={pomodoroMins}
-                                onChange={(e) => setPomodoroMins(Number(e.target.value))}
-                                className="w-full accent-violet-500"
-                            />
+                            <span className="text-violet-400 font-bold">{maxParticipants}</span>
                         </div>
-                    )}
+                        <input
+                            type="range"
+                            min="2"
+                            max="50"
+                            step="1"
+                            value={maxParticipants}
+                            onChange={(e) => setMaxParticipants(Number(e.target.value))}
+                            className="w-full accent-violet-500 h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <p className="text-xs text-zinc-500 mt-2">
+                            Limit the number of people who can join this room.
+                        </p>
+                    </div>
+
 
                     <div className="flex gap-4 pt-4">
                         <Button variant="secondary" onClick={onClose} className="flex-1">
