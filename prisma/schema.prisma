@@ -1,0 +1,170 @@
+// Prisma schema for Vivitsu - AI Study Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User profile (extends Supabase auth)
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  name        String?
+  avatarUrl   String?
+  studyGoal   String?
+  subjects    String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  sessions    StudySession[]
+  streak      Streak?
+  chatMessages ChatMessage[]
+  roomsCreated Room[]        @relation("RoomCreator")
+  roomMemberships RoomMember[]
+  roomMessages RoomMessage[]
+  
+  // Phase 8: Social & Productivity
+  sentFriendRequests     Friendship[] @relation("SentFriendships")
+  receivedFriendRequests Friendship[] @relation("ReceivedFriendships")
+  notes                  Note[]
+  todos                  Todo[]
+
+  @@map("users")
+}
+
+// Study sessions for time tracking
+model StudySession {
+  id          String    @id @default(uuid())
+  userId      String
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  durationMins Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("study_sessions")
+}
+
+// Streak tracking
+model Streak {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  current    Int      @default(0)
+  longest    Int      @default(0)
+  lastStudy  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("streaks")
+}
+
+// AI Chat messages (for context, not long-term memory)
+model ChatMessage {
+  id        String   @id @default(uuid())
+  userId    String
+  role      String   // 'user' | 'assistant'
+  content   String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("chat_messages")
+}
+
+// Study rooms
+model Room {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  roomType     String   @default("open") // 'pomodoro' | 'open'
+  pomodoroMins Int      @default(25)
+  breakMins    Int      @default(5)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  createdById  String
+
+  createdBy User         @relation("RoomCreator", fields: [createdById], references: [id])
+  members   RoomMember[]
+  messages  RoomMessage[]
+
+  @@map("rooms")
+}
+
+// Room membership
+model RoomMember {
+  roomId   String
+  userId   String
+  joinedAt DateTime @default(now())
+  isOnline Boolean  @default(false)
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, userId])
+  @@map("room_members")
+}
+
+// Room chat messages
+model RoomMessage {
+  id        String   @id @default(uuid())
+  roomId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, createdAt])
+  @@map("room_messages")
+}
+
+// Phase 8: New Models
+
+model Friendship {
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  status     String   @default("PENDING") // PENDING, ACCEPTED
+  createdAt  DateTime @default(now())
+
+  sender     User     @relation("SentFriendships", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReceivedFriendships", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@map("friendships")
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  content   String   // Markdown string
+  tags      String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notes")
+}
+
+model Todo {
+  id        String   @id @default(uuid())
+  userId    String
+  content   String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("todos")
+}
