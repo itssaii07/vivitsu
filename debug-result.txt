@@ -1,0 +1,2 @@
+SUCCESS: prisma.noteCollaborator exists.
+SUCCESS: Fetched notes: 1

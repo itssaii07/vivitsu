@@ -3,7 +3,7 @@ import { Sparkles, Users, Flame, Brain, ArrowRight } from 'lucide-react'
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-violet-950/20 to-zinc-950">
+    <div className="min-h-screen relative">
       {/* Animated background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-violet-600/20 to-transparent rounded-full blur-3xl animate-pulse" />
@@ -42,9 +42,9 @@ export default function Home() {
             <span>AI-Powered Study Platform</span>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight tracking-tight">
             Study smarter with{' '}
-            <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
+            <span className="text-gradient font-extrabold">
               AI & friends
             </span>
           </h1>
@@ -111,12 +111,12 @@ function FeatureCard({
   description: string
 }) {
   return (
-    <div className="p-8 rounded-2xl bg-zinc-900/50 border border-zinc-800 hover:border-violet-500/50 transition-all duration-300 group">
-      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-600/20 to-indigo-600/20 flex items-center justify-center text-violet-400 mb-6 group-hover:from-violet-600/30 group-hover:to-indigo-600/30 transition-all">
+    <div className="glass-card p-8 rounded-2xl group cursor-pointer hover:shadow-violet-500/10">
+      <div className="w-14 h-14 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-6 group-hover:scale-110 group-hover:bg-violet-500/20 transition-all duration-300">
         {icon}
       </div>
-      <h3 className="text-xl font-semibold text-white mb-3">{title}</h3>
-      <p className="text-zinc-400">{description}</p>
+      <h3 className="text-xl font-semibold text-white mb-3 group-hover:text-violet-300 transition-colors">{title}</h3>
+      <p className="text-zinc-400 leading-relaxed">{description}</p>
     </div>
   )
 }

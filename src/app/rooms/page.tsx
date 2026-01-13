@@ -13,6 +13,8 @@ import {
     Copy,
     Share2
 } from 'lucide-react'
+import { PageTransition, StaggerContainer, StaggerItem } from '@/components/ui/Motion'
+import { TiltCard } from '@/components/ui/TiltCard'
 import { Button, Card } from '@/components/ui'
 import { useAuth } from '@/components/providers'
 import { Sidebar } from '@/components/layout/Sidebar'
@@ -73,12 +75,12 @@ export default function RoomsPage() {
     const publicRooms = rooms.filter(r => !r.isPrivate)
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-violet-950/10 to-zinc-950">
+        <div className="min-h-screen">
             <Sidebar />
 
             {/* Main Content */}
             <main className="ml-64 p-8">
-                <div className="max-w-6xl">
+                <PageTransition className="max-w-6xl">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-8">
                         <div>
@@ -121,16 +123,17 @@ export default function RoomsPage() {
                                 <Lock className="w-5 h-5 text-violet-400" />
                                 My Private Rooms
                             </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {privateRooms.map((room) => (
-                                    <RoomCard
-                                        key={room.id}
-                                        room={room}
-                                        userId={user?.id}
-                                        onDelete={fetchRooms}
-                                    />
+                                    <StaggerItem key={room.id}>
+                                        <RoomCard
+                                            room={room}
+                                            userId={user?.id}
+                                            onDelete={fetchRooms}
+                                        />
+                                    </StaggerItem>
                                 ))}
-                            </div>
+                            </StaggerContainer>
                         </div>
                     )}
 
@@ -143,16 +146,17 @@ export default function RoomsPage() {
                         {loading ? (
                             <div className="text-zinc-400">Loading rooms...</div>
                         ) : publicRooms.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {publicRooms.map((room) => (
-                                    <RoomCard
-                                        key={room.id}
-                                        room={room}
-                                        userId={user?.id}
-                                        onDelete={fetchRooms}
-                                    />
+                                    <StaggerItem key={room.id}>
+                                        <RoomCard
+                                            room={room}
+                                            userId={user?.id}
+                                            onDelete={fetchRooms}
+                                        />
+                                    </StaggerItem>
                                 ))}
-                            </div>
+                            </StaggerContainer>
                         ) : (
                             <div className="text-zinc-500 italic">No public rooms active right now.</div>
                         )}
@@ -172,7 +176,7 @@ export default function RoomsPage() {
                             </Button>
                         </Card>
                     )}
-                </div>
+                </PageTransition>
             </main>
 
             {/* Create Room Modal */}
@@ -214,79 +218,81 @@ const RoomCard = ({ room, userId, onDelete }: { room: any, userId?: string, onDe
 
     return (
         <Link href={`/rooms/${room.id}`}>
-            <Card className="hover:border-violet-500/50 transition-all group cursor-pointer relative h-full flex flex-col">
-                <div className="flex items-start justify-between mb-4">
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <h3 className="text-lg font-semibold text-white">{room.name}</h3>
-                            {room.isPrivate && <Lock className="w-4 h-4 text-zinc-500" />}
+            <TiltCard className="h-full">
+                <Card variant="glass" className="hover:border-violet-500/50 transition-all group cursor-pointer relative h-full flex flex-col">
+                    <div className="flex items-start justify-between mb-4">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <h3 className="text-lg font-semibold text-white">{room.name}</h3>
+                                {room.isPrivate && <Lock className="w-4 h-4 text-zinc-500" />}
+                            </div>
+
+                            <div className="flex items-center gap-2 text-sm text-zinc-400">
+                                {room.roomType === 'pomodoro' ? (
+                                    <>
+                                        <Timer className="w-4 h-4" />
+                                        <span>{room.pomodoroMins}min</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Clock className="w-4 h-4" />
+                                        <span>Open</span>
+                                    </>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="flex items-center gap-2 text-sm text-zinc-400">
-                            {room.roomType === 'pomodoro' ? (
-                                <>
-                                    <Timer className="w-4 h-4" />
-                                    <span>{room.pomodoroMins}min</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Clock className="w-4 h-4" />
-                                    <span>Open</span>
-                                </>
+                        <div className="flex items-center gap-1">
+                            {isCreator && (
+                                <button
+                                    onClick={handleDelete}
+                                    className="p-2 text-zinc-500 hover:text-red-500 rounded-full hover:bg-red-500/10 transition-colors z-10"
+                                    title="Delete Room"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
+                            {!isCreator && (
+                                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/20 text-green-400 text-xs">
+                                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                                    Live
+                                </div>
                             )}
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1">
-                        {isCreator && (
-                            <button
-                                onClick={handleDelete}
-                                className="p-2 text-zinc-500 hover:text-red-500 rounded-full hover:bg-red-500/10 transition-colors z-10"
-                                title="Delete Room"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
-                        )}
-                        {!isCreator && (
-                            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/20 text-green-400 text-xs">
-                                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                                Live
+                    <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm text-zinc-400">
+                            <UsersIcon className="w-4 h-4" />
+                            <span>{room.membersOnline} / {room.maxParticipants || room.totalMembers} online</span>
+                        </div>
+
+                        {isCreator && room.joinCode && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        const text = `Join my private study room "${room.name}" on Vivitsu! Code: ${room.joinCode}`
+                                        navigator.clipboard.writeText(text)
+                                        alert('Invite message copied!')
+                                    }}
+                                    className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-white px-2 py-1 rounded hover:bg-zinc-800 transition-colors"
+                                >
+                                    <Share2 className="w-3 h-3" />
+                                    Invite
+                                </button>
+                                <button
+                                    onClick={copyCode}
+                                    className="flex items-center gap-1.5 text-xs font-medium text-violet-400 hover:text-violet-300 px-2 py-1 rounded bg-violet-500/10 hover:bg-violet-500/20 transition-colors"
+                                >
+                                    <Copy className="w-3 h-3" />
+                                    {room.joinCode}
+                                </button>
                             </div>
                         )}
                     </div>
-                </div>
-
-                <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-zinc-400">
-                        <UsersIcon className="w-4 h-4" />
-                        <span>{room.membersOnline} / {room.maxParticipants || room.totalMembers} online</span>
-                    </div>
-
-                    {isCreator && room.joinCode && (
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={(e) => {
-                                    e.preventDefault()
-                                    const text = `Join my private study room "${room.name}" on Vivitsu! Code: ${room.joinCode}`
-                                    navigator.clipboard.writeText(text)
-                                    alert('Invite message copied!')
-                                }}
-                                className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-white px-2 py-1 rounded hover:bg-zinc-800 transition-colors"
-                            >
-                                <Share2 className="w-3 h-3" />
-                                Invite
-                            </button>
-                            <button
-                                onClick={copyCode}
-                                className="flex items-center gap-1.5 text-xs font-medium text-violet-400 hover:text-violet-300 px-2 py-1 rounded bg-violet-500/10 hover:bg-violet-500/20 transition-colors"
-                            >
-                                <Copy className="w-3 h-3" />
-                                {room.joinCode}
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </Card>
+                </Card>
+            </TiltCard>
         </Link>
     )
 }

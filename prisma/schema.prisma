@@ -31,6 +31,7 @@ model User {
   sentFriendRequests     Friendship[] @relation("SentFriendships")
   receivedFriendRequests Friendship[] @relation("ReceivedFriendships")
   notes                  Note[]
+  collaborations         NoteCollaborator[]
   todos                  Todo[]
 
   @@map("users")
@@ -158,9 +159,24 @@ model Note {
   updatedAt DateTime @updatedAt
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collaborators NoteCollaborator[]
 
   @@index([userId])
   @@map("notes")
+}
+
+model NoteCollaborator {
+  id        String   @id @default(uuid())
+  noteId    String
+  userId    String
+  role      String   @default("VIEWER") // VIEWER, EDITOR
+  createdAt DateTime @default(now())
+
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, userId])
+  @@map("note_collaborators")
 }
 
 model Todo {

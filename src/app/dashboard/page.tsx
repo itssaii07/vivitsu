@@ -14,6 +14,8 @@ import {
     Plus,
     Trash2
 } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { PageTransition, StaggerContainer, StaggerItem } from '@/components/ui/Motion'
 import { Button, Card, CardHeader, CardTitle, CardContent } from '@/components/ui'
 import { useStudyStore } from '@/stores'
 import { formatDuration, getStreakEmoji } from '@/lib/utils'
@@ -85,12 +87,12 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-violet-950/10 to-zinc-950">
+        <div className="min-h-screen">
             <Sidebar />
 
             {/* Main Content */}
             <main className="ml-64 p-8">
-                <div className="max-w-6xl">
+                <PageTransition className="max-w-6xl">
                     {/* Header */}
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold text-white mb-2">Welcome back! 👋</h1>
@@ -98,118 +100,130 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <Card variant="glass">
-                            <CardContent className="flex items-center gap-4">
-                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500/20 to-red-500/20 flex items-center justify-center">
-                                    <Flame className="w-7 h-7 text-orange-400" />
-                                </div>
-                                <div>
-                                    <p className="text-zinc-400 text-sm">Current Streak</p>
-                                    <p className="text-2xl font-bold text-white">
-                                        {currentStreak} days {getStreakEmoji(currentStreak)}
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                    <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <StaggerItem>
+                            <Card variant="glass">
+                                <CardContent className="flex items-center gap-4">
+                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500/20 to-red-500/20 flex items-center justify-center ring-1 ring-orange-500/20">
+                                        <Flame className="w-7 h-7 text-orange-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-zinc-400 text-sm">Current Streak</p>
+                                        <p className="text-2xl font-bold text-white">
+                                            {currentStreak} days {getStreakEmoji(currentStreak)}
+                                        </p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </StaggerItem>
 
-                        <Card variant="glass">
-                            <CardContent className="flex items-center gap-4">
-                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 flex items-center justify-center">
-                                    <Clock className="w-7 h-7 text-violet-400" />
-                                </div>
-                                <div>
-                                    <p className="text-zinc-400 text-sm">Today's Study Time</p>
-                                    <p className="text-2xl font-bold text-white">{formatDuration(todayMinutes)}</p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <StaggerItem>
+                            <Card variant="glass">
+                                <CardContent className="flex items-center gap-4">
+                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 flex items-center justify-center ring-1 ring-violet-500/20">
+                                        <Clock className="w-7 h-7 text-violet-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-zinc-400 text-sm">Today's Study Time</p>
+                                        <p className="text-2xl font-bold text-white">{formatDuration(todayMinutes)}</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </StaggerItem>
 
-                        <Card variant="glass">
-                            <CardContent className="flex items-center gap-4">
-                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center">
-                                    <Calendar className="w-7 h-7 text-green-400" />
-                                </div>
-                                <div>
-                                    <p className="text-zinc-400 text-sm">This Week</p>
-                                    <p className="text-2xl font-bold text-white">--</p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                        <StaggerItem>
+                            <Card variant="glass">
+                                <CardContent className="flex items-center gap-4">
+                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center ring-1 ring-green-500/20">
+                                        <Calendar className="w-7 h-7 text-green-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-zinc-400 text-sm">This Week</p>
+                                        <p className="text-2xl font-bold text-white">--</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </StaggerItem>
+                    </StaggerContainer>
 
                     {/* Main Study Card */}
-                    <Card variant="glass" className="mb-8">
-                        <div className="flex flex-col items-center py-12">
-                            <div className="text-6xl font-mono font-bold text-white mb-8">
-                                {formatTime(elapsedTime)}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.3 }}
+                    >
+                        <Card variant="glass" className="mb-8">
+                            <div className="flex flex-col items-center py-12">
+                                <div className="text-6xl font-mono font-bold text-white mb-8">
+                                    {formatTime(elapsedTime)}
+                                </div>
+
+                                {isStudying ? (
+                                    <Button
+                                        size="lg"
+                                        variant="danger"
+                                        onClick={handleEndSession}
+                                        className="min-w-[200px]"
+                                    >
+                                        <Square className="w-5 h-5" />
+                                        End Session
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        size="lg"
+                                        onClick={handleStartSession}
+                                        className="min-w-[200px]"
+                                    >
+                                        <Play className="w-5 h-5" />
+                                        Start Studying
+                                    </Button>
+                                )}
+
+                                {isStudying && (
+                                    <p className="text-zinc-400 mt-4">
+                                        You're doing great! Stay focused 💪
+                                    </p>
+                                )}
                             </div>
+                        </Card>
 
-                            {isStudying ? (
-                                <Button
-                                    size="lg"
-                                    variant="danger"
-                                    onClick={handleEndSession}
-                                    className="min-w-[200px]"
-                                >
-                                    <Square className="w-5 h-5" />
-                                    End Session
-                                </Button>
-                            ) : (
-                                <Button
-                                    size="lg"
-                                    onClick={handleStartSession}
-                                    className="min-w-[200px]"
-                                >
-                                    <Play className="w-5 h-5" />
-                                    Start Studying
-                                </Button>
-                            )}
+                        {/* Quick Actions */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <Link href="/chat">
+                                <Card className="hover:border-violet-500/50 transition-all cursor-pointer group">
+                                    <CardContent className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600/20 to-indigo-600/20 flex items-center justify-center group-hover:from-violet-600/30 group-hover:to-indigo-600/30 transition-all">
+                                            <MessageSquare className="w-6 h-6 text-violet-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-white font-semibold">Ask AI Assistant</h3>
+                                            <p className="text-zinc-400 text-sm">Get personalized study help</p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
 
-                            {isStudying && (
-                                <p className="text-zinc-400 mt-4">
-                                    You're doing great! Stay focused 💪
-                                </p>
-                            )}
+                            <Link href="/rooms">
+                                <Card className="hover:border-violet-500/50 transition-all cursor-pointer group">
+                                    <CardContent className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600/20 to-indigo-600/20 flex items-center justify-center group-hover:from-violet-600/30 group-hover:to-indigo-600/30 transition-all">
+                                            <Users className="w-6 h-6 text-violet-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-white font-semibold">Join Study Room</h3>
+                                            <p className="text-zinc-400 text-sm">Study with friends</p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
                         </div>
-                    </Card>
 
-                    {/* Quick Actions */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Link href="/chat">
-                            <Card className="hover:border-violet-500/50 transition-all cursor-pointer group">
-                                <CardContent className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600/20 to-indigo-600/20 flex items-center justify-center group-hover:from-violet-600/30 group-hover:to-indigo-600/30 transition-all">
-                                        <MessageSquare className="w-6 h-6 text-violet-400" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-white font-semibold">Ask AI Assistant</h3>
-                                        <p className="text-zinc-400 text-sm">Get personalized study help</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </Link>
-
-                        <Link href="/rooms">
-                            <Card className="hover:border-violet-500/50 transition-all cursor-pointer group">
-                                <CardContent className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600/20 to-indigo-600/20 flex items-center justify-center group-hover:from-violet-600/30 group-hover:to-indigo-600/30 transition-all">
-                                        <Users className="w-6 h-6 text-violet-400" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-white font-semibold">Join Study Room</h3>
-                                        <p className="text-zinc-400 text-sm">Study with friends</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </Link>
-                    </div>
-
-                    {/* Todo Widget */}
-                    <div className="mt-8">
-                        <TodoWidget />
-                    </div>
-                </div>
+                        {/* Todo Widget */}
+                        <div className="mt-8">
+                            <TodoWidget />
+                        </div>
+                    </motion.div>
+                </PageTransition>
             </main>
         </div>
     )

@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import dynamic from 'next/dynamic'
+import { motion } from 'framer-motion'
 import {
-    Brain,
     TrendingUp,
     MessageSquare,
     MessageCircle,
@@ -14,6 +15,8 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/components/providers'
+
+const Logo3D = dynamic(() => import('@/components/3d/Logo3D'), { ssr: false })
 
 const navItems = [
     { href: '/dashboard', icon: TrendingUp, label: 'Dashboard' },
@@ -32,13 +35,16 @@ export function Sidebar() {
     const userInitial = userName.charAt(0).toUpperCase()
 
     return (
-        <aside className="fixed left-0 top-0 h-full w-64 bg-zinc-900/50 border-r border-zinc-800 p-6 flex flex-col z-40">
+        <aside className="fixed left-0 top-0 h-full w-64 glass-panel border-r-0 p-6 flex flex-col z-40 transition-all duration-300">
             {/* Logo */}
-            <Link href="/dashboard" className="flex items-center gap-2 mb-8">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
-                    <Brain className="w-6 h-6 text-white" />
+            <Link href="/dashboard" className="flex items-center gap-3 mb-10 group">
+                <div className="relative">
+                    <div className="absolute inset-0 bg-violet-500/30 blur-xl rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
+                    <Logo3D />
                 </div>
-                <span className="text-xl font-bold text-white">Vivitsu</span>
+                <span className="text-2xl font-bold text-white tracking-tight group-hover:text-violet-400 transition-colors">
+                    Vivitsu
+                </span>
             </Link>
 
             {/* Navigation */}
@@ -49,22 +55,39 @@ export function Sidebar() {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive
-                                ? 'bg-violet-600/20 text-violet-400'
-                                : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-white'
-                                }`}
+                            className="block relative"
                         >
-                            <item.icon className="w-5 h-5" />
-                            <span className="font-medium">{item.label}</span>
+                            {isActive && (
+                                <motion.div
+                                    layoutId="activeTab"
+                                    className="absolute inset-0 bg-gradient-to-r from-violet-600/20 to-indigo-600/10 rounded-xl"
+                                    initial={false}
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                            )}
+                            <div className={`relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive
+                                ? 'text-violet-400'
+                                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                                }`}>
+                                <item.icon className="w-5 h-5" />
+                                <span className="font-medium">{item.label}</span>
+                                {isActive && (
+                                    <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        className="w-1.5 h-1.5 rounded-full bg-violet-400 ml-auto"
+                                    />
+                                )}
+                            </div>
                         </Link>
                     )
                 })}
             </nav>
 
             {/* User Section */}
-            <div className="pt-6 border-t border-zinc-800 space-y-4">
-                <Link href="/profile" className="flex items-center gap-3 group">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-medium overflow-hidden">
+            <div className="pt-6 border-t border-white/5 space-y-4">
+                <Link href="/profile" className="flex items-center gap-3 group p-2 rounded-xl hover:bg-white/5 transition-colors">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white font-medium overflow-hidden ring-2 ring-transparent group-hover:ring-violet-500/50 transition-all">
                         {user?.user_metadata?.avatarUrl ? (
                             <img
                                 src={user.user_metadata.avatarUrl}

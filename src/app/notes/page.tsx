@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Trash2, FileText, Save, Loader2 } from 'lucide-react'
+import { Plus, Trash2, FileText, Save, Loader2, Users } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { useAuth } from '@/components/providers'
 import { Button } from '@/components/ui'
@@ -80,17 +80,98 @@ export default function NotesPage() {
             await fetch('/api/notes', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, title: payload.title, content: payload.content })
+                body: JSON.stringify({
+                    id,
+                    title: payload.title,
+                    content: payload.content,
+                    userId: user?.id // Pass user ID for edit verification
+                })
             })
             setSaving(false)
         }, 1000)
     }
 
+    const [showShareModal, setShowShareModal] = useState(false)
+    const [friends, setFriends] = useState<any[]>([])
+
+    // Fetch friends when opening share modal
+    const handleShareClick = async () => {
+        if (!user) return
+        setShowShareModal(true)
+        if (friends.length === 0) {
+            try {
+                const res = await fetch(`/api/friends?userId=${user.id}`)
+                const data = await res.json()
+                if (data.friends) setFriends(data.friends)
+            } catch (e) {
+                console.error('Failed to fetch friends')
+            }
+        }
+    }
+
+    const shareWithFriend = async (friendId: string) => {
+        if (!activeNote || !user) return
+        try {
+            const res = await fetch('/api/notes/share', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    noteId: activeNote.id,
+                    ownerId: user.id,
+                    targetUserId: friendId
+                })
+            })
+            const data = await res.json()
+            if (data.error) {
+                alert(data.error)
+            } else {
+                alert('Shared successfully!')
+                setShowShareModal(false)
+            }
+        } catch (e) {
+            alert('Failed to share')
+        }
+    }
+
     return (
-        <div className="flex h-screen bg-[#191919] text-[#d4d4d4]">
+        <div className="flex h-screen bg-[#191919] text-[#d4d4d4] relative">
             <Sidebar />
 
             <main className="ml-64 flex flex-1 h-full overflow-hidden">
+                {/* Simple Share Modal Overlay */}
+                {showShareModal && (
+                    <div className="absolute inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+                        <div className="bg-[#2a2a2a] p-6 rounded-xl border border-[#3a3a3a] w-96 shadow-2xl">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-white font-semibold">Share with Friends</h3>
+                                <button onClick={() => setShowShareModal(false)} className="text-zinc-500 hover:text-white">✕</button>
+                            </div>
+                            <div className="space-y-2 max-h-60 overflow-y-auto">
+                                {friends.length === 0 ? (
+                                    <p className="text-zinc-500 text-sm text-center py-4">No friends added yet.</p>
+                                ) : (
+                                    friends.map(f => (
+                                        <button
+                                            key={f.id}
+                                            onClick={() => shareWithFriend(f.friend.id)}
+                                            className="w-full flex items-center gap-3 p-2 hover:bg-[#3a3a3a] rounded-lg transition-colors text-left"
+                                        >
+                                            <div className="w-8 h-8 bg-violet-500/20 rounded-full flex items-center justify-center text-xs font-bold text-violet-400">
+                                                {f.friend.avatarUrl ? (
+                                                    <img src={f.friend.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
+                                                ) : (
+                                                    f.friend.name?.[0] || '?'
+                                                )}
+                                            </div>
+                                            <span className="text-zinc-200 text-sm font-medium">{f.friend.name || f.friend.email}</span>
+                                        </button>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Notes Sidebar */}
                 <div className="w-64 bg-[#202020] border-r border-[#2a2a2a] flex flex-col">
                     <div className="p-4 border-b border-[#2a2a2a] flex justify-between items-center">
@@ -139,13 +220,20 @@ export default function NotesPage() {
                 </div>
 
                 {/* Editor Area */}
-                <div className="flex-1 flex flex-col bg-[#191919]">
+                <div className="flex-1 flex flex-col bg-[#191919] relative">
                     {activeNote ? (
                         <div className="max-w-3xl mx-auto w-full h-full flex flex-col p-12">
                             <div className="flex items-center justify-between mb-8">
                                 <span className="text-xs text-[#5a5a5a]">
                                     {saving ? 'Saving...' : 'Saved'}
                                 </span>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={handleShareClick}
+                                >
+                                    Share
+                                </Button>
                             </div>
 
                             <input

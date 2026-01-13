@@ -14,6 +14,8 @@ export const metadata: Metadata = {
   keywords: ["study", "AI", "learning", "productivity", "study rooms", "streaks"],
 };
 
+import SceneWrapper from "@/components/3d/SceneWrapper";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -21,10 +23,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.variable} font-sans antialiased bg-zinc-950 text-zinc-100`}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+      <body className={`${inter.variable} font-sans antialiased bg-black text-zinc-100 min-h-screen relative`}>
+        <SceneWrapper />
+        <div className="relative z-10 w-full h-full">
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </div>
       </body>
     </html>
   );

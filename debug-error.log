@@ -1,0 +1,46 @@
+{
+  "clientVersion": "7.2.0",
+  "name": "PrismaClientInitializationError"
+}
+`PrismaClient` needs to be constructed with a non-empty, valid `PrismaClientOptions`:
+
+```
+new PrismaClient({
+  ...
+})
+```
+
+or
+
+```
+constructor() {
+  super({ ... });
+}
+```
+          
+PrismaClientInitializationError: `PrismaClient` needs to be constructed with a non-empty, valid `PrismaClientOptions`:
+
+```
+new PrismaClient({
+  ...
+})
+```
+
+or
+
+```
+constructor() {
+  super({ ... });
+}
+```
+          
+    at new t (C:\sai\vivitsu\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:259:15)
+    at main (C:\sai\vivitsu\scripts\debug-notes.ts:10:24)
+    at fs (C:\sai\vivitsu\scripts\debug-notes.ts:54:1)
+    at Object.<anonymous> (C:\sai\vivitsu\scripts\debug-notes.ts:57:2)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14)
+    at Object.transformer (C:\Users\saima\AppData\Local\npm-cache\_npx\fd45a72a545557e9\node_modules\tsx\dist\register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1481:32)
+    at Module._load (node:internal/modules/cjs/loader:1300:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
