@@ -11,7 +11,8 @@ import {
     Users,
     Trophy,
     LogOut,
-    FileText
+    FileText,
+    Sparkles
 } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/components/providers'
